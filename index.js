@@ -4,9 +4,31 @@ var express = require('express');
 var app = express();
 var tables = ["product","users","orders"]
 
+var bcrypt = require('bcrypt');
+const sR = 31;
+
 var bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+app.post('/login', function (req, res) {
+  jsonBody = req.body;
+  username = req.body.username;
+  password = req.body.password;
+  userId = 0;
+  hashedPassword = "";
+  connection = getConnection()
+  //Get user hashed password associated with username
+  connection.query("Select id, password FROM user WHERE username =" + username, function (err, result, fields) {
+    userId = result.password;
+    hashPassword = result.password;
+  });
+  //compare hash
+  bcrypt.compare(password, hashedPassword, function(err, res) {
+    res.send([userId,res]);
+  });
+  connection.end();
+});
 
 //GET call  to grab all items from table
 app.get('/:table', function (req, res) {
@@ -52,6 +74,10 @@ app.put('/:table', function (req, res) {
     newValList =""
     //write values to list for query
     for (i in values) {
+      //hash password field if present
+      if (fields[i] == 'password'){
+        values[i] = hashPassword(values[i]);
+      }
       //determine if value needs quotes
       if (values[i] instanceof Number) {
         newValList += values[i];
@@ -168,6 +194,13 @@ function getConnection() {
   connection.connect();
   return connection;
 }
+//hash password
+function hashPassword(password) {
+  bcrypt.hash(password, sR, function(err, hash) {
+  return hash;
+  });
+}
+//check password
 
 // test server
 
