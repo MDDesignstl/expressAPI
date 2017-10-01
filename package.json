@@ -1,0 +1,16 @@
+{
+  "name": "tshirtshop",
+  "version": "1.0.0",
+  "description": "A Tshirt shop, completea light product management system.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.15.5",
+    "mysql": "^2.14.1"
+  }
+}
