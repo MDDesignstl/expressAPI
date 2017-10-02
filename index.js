@@ -10,7 +10,7 @@ const sR = 31;
 var bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
+//POST call  to validate password
 app.post('/login', function (req, res) {
   jsonBody = req.body;
   username = req.body.username;
@@ -18,8 +18,10 @@ app.post('/login', function (req, res) {
   userId = 0;
   hashedPassword = "";
   connection = getConnection()
+  
   //Get user hashed password associated with username
   connection.query("Select id, password FROM user WHERE username =" + username, function (err, result, fields) {
+    //TODO: handle what happens when the username is not found
     userId = result.password;
     hashPassword = result.password;
   });
@@ -107,7 +109,7 @@ app.put('/:table', function (req, res) {
 });
 
 //GET call for specific record
-app.get('/products/:id', function (req, res) {
+app.get('/:table/:id', function (req, res) {
   table = req.params.table
   //check if table id valid
   if (!tables.includes(table)) {
