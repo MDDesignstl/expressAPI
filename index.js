@@ -2,10 +2,10 @@ var fs = require('fs');
 var http = require('http');
 var express = require('express');
 var app = express();
-var tables = ["product","users","orders"]
+var tables = ["product","user","purchase"]
 
 var bcrypt = require('bcrypt');
-const sR = 31;
+const saltRounds = 10;
 
 var bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -18,18 +18,25 @@ app.post('/login', function (req, res) {
   userId = 0;
   hashedPassword = "";
   connection = getConnection()
-  
+  query = "Select id, password FROM user WHERE username ='" + username +"'";
+
   //Get user hashed password associated with username
-  connection.query("Select id, password FROM user WHERE username =" + username, function (err, result, fields) {
+  connection.query(query, function (err, result, fields) {
     //TODO: handle what happens when the username is not found
-    userId = result.password;
-    hashPassword = result.password;
-  });
-  //compare hash
-  bcrypt.compare(password, hashedPassword, function(err, res) {
-    res.send([userId,res]);
-  });
+    result = result[0];
+    userId = result.id;
+    hashedPassword = result.password;
+
+    console.log(userId);
+    console.log(hashedPassword);
+
+      //compare hash
+  validLogin = bcrypt.compareSync(password, hashedPassword);
+  console.log(validLogin);
+  res.send({validLogin,userId});
   connection.end();
+  });
+
 });
 
 //GET call  to grab all items from table
@@ -125,7 +132,7 @@ app.get('/:table/:id', function (req, res) {
     //grab id from url
     id = req.params.id
     //build query
-    query = "SELECT " + fields + " FROM product WHERE id = " + id
+    query = "SELECT " + fields + " FROM " + table + " WHERE id = " + id
     //establish connection
     connection = getConnection()
     //query the db
@@ -154,6 +161,12 @@ app.post('/:table/:id', function (req, res) {
     newValList =""
     //write fields and new values to list for query
     for (i in values) {
+      //hash password field if present
+      if (fields[i] == 'password'){
+        console.log(values[i]);
+        values[i] = hashPassword(values[i]);
+        console.log(values[i]);
+      }
       //determine if value needs quotes
       if (values[i] instanceof Number) {
         newValList += fields[i] + "=" + values[i];
@@ -198,9 +211,9 @@ function getConnection() {
 }
 //hash password
 function hashPassword(password) {
-  bcrypt.hash(password, sR, function(err, hash) {
-  return hash;
-  });
+var salt = bcrypt.genSaltSync(saltRounds);
+var hash = bcrypt.hashSync(password, salt);
+return hash;
 }
 //check password
 
