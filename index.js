@@ -10,6 +10,15 @@ const saltRounds = 10;
 var bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+
+
 //POST call  to validate password
 app.post('/login', function (req, res) {
   jsonBody = req.body;
@@ -42,6 +51,7 @@ app.post('/login', function (req, res) {
 //GET call  to grab all items from table
 app.get('/:table', function (req, res) {
   table = req.params.table
+  search = req.query['where']
   //check if table is valid
   if (!tables.includes(table)) {
     res.send("Invalid Request: Table not found");
@@ -54,6 +64,10 @@ app.get('/:table', function (req, res) {
       }
     //build query
     query = "SELECT " + fields + " FROM " + table
+
+    if (search) {
+      query += " Where " + search;
+    }
     //establish connection
     connection = getConnection()
     //query the db
