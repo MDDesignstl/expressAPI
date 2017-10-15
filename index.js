@@ -7,6 +7,9 @@ var tables = ["product","user","purchase"]
 var bcrypt = require('bcrypt');
 const saltRounds = 10;
 
+var jwt = require('jsonwebtoken');
+var secret = "shhhsecret";
+
 var bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -27,13 +30,14 @@ app.post('/login', function (req, res) {
   userId = 0;
   hashedPassword = "";
   connection = getConnection()
-  query = "Select id, password FROM user WHERE username ='" + username +"'";
+  query = "Select id, username, password FROM user WHERE username ='" + username +"'";
 
   //Get user hashed password associated with username
   connection.query(query, function (err, result, fields) {
     //TODO: handle what happens when the username is not found
     result = result[0];
     userId = result.id;
+    username = result.username;
     hashedPassword = result.password;
 
     console.log(userId);
@@ -42,16 +46,29 @@ app.post('/login', function (req, res) {
       //compare hash
   validLogin = bcrypt.compareSync(password, hashedPassword);
   console.log(validLogin);
-  res.send({validLogin,userId});
+
+  if (validLogin){
+  var token = jwt.sign({"id":userId,"username":username},secret,{ expiresIn: '1h' });
+  res.send({validLogin,userId,token});
+  } else {
+    res.send({validLogin});
+  }
   connection.end();
   });
 
 });
 
+app.post('/auth', function (req, res) {
+  jsonBody = req.body;
+  token = req.body.token;
+  session = checkToken(token);
+  res.send(session);
+});
+
+
 //GET call  to grab all items from table
 app.get('/:table', function (req, res) {
   table = req.params.table
-  search = req.query['where']
   //check if table is valid
   if (!tables.includes(table)) {
     res.send("Invalid Request: Table not found");
@@ -64,8 +81,8 @@ app.get('/:table', function (req, res) {
       }
     //build query
     query = "SELECT " + fields + " FROM " + table
-
-    if (search) {
+    //add search terms if present
+    if (req.query.where) {
       query += " Where " + search;
     }
     //establish connection
@@ -223,6 +240,22 @@ function getConnection() {
   connection.connect();
   return connection;
 }
+//check session token
+function checkToken(token) {
+  return jwt.verify(token, secret, function(err, decoded) {
+      if (err) {
+        err = {
+          message: "Inavlid Token"
+        };
+        console.log(err);
+        return {"validSession":false, "error": err};
+      } else {
+        console.log(decoded);
+        return {"ValidSession":true, "sessionDetails":decoded};
+      }
+});
+}
+
 //hash password
 function hashPassword(password) {
 var salt = bcrypt.genSaltSync(saltRounds);
